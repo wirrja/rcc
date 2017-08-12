@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 '''RCC router copy config'''
 import os
+import hashlib
 from datetime import datetime
 from telnetlib import Telnet
 from device_settings import cisco, huawei, juniper
-
 # remove after tests
-# from CONFIGCISCO import TEXT
+from CONFIGCISCO import TEXT
 
 class Device:
     '''It is work like an Expect scripts:
@@ -84,14 +84,13 @@ class Device:
             with open('error.txt', 'a') as file:
                 file.write(curr_time + ' '+ errdevice + '\n')
             print(result)
-
-            return None
+            # delete after tests
+            return TEXT
 
 
     def backup(self):
-        curr_date = datetime.now().strftime('%d_%m_%y')
         backupdir = './configs/'
-        configname = self.location + '_' + curr_date + '.txt'
+        configname = self.location + '.txt'
         try:
             result = self.get_config()
             if result:
@@ -101,9 +100,24 @@ class Device:
                     os.makedirs(backupdir)
                     print('Backup directory not found, creating...')
                 try:
-                    with open(backupdir + configname, 'w') as file:
-                        file.write(result)
-                        print(self.location, 'was saved!')
+                    newfile = result.encode('ascii')
+                    if os.path.exists(backupdir + configname):
+                        with open(backupdir + configname, 'rb') as oldfile:
+                            hash1 = oldfile.read()
+                            hash2 = newfile
+                            h1 = hashlib.md5(hash1)
+                            h2 = hashlib.md5(hash2)
+                            if h1.hexdigest() != h2.hexdigest():
+                                oldfile.close()
+                                with open(backupdir + configname, 'w') as oldfile:
+                                    oldfile.write(result)
+                                    print(self.location, 'has updates! saved.')
+                            else:
+                                print(self.location, 'not changed')
+                    else:
+                        with open(backupdir + configname, 'w') as oldfile:
+                            oldfile.write(result)
+                            print(self.location, 'have updates! saved.')
                 except IOError as detail:
                     print(detail)
             else:
