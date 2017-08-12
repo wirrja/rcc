@@ -1,0 +1,5 @@
+1-Floor_10.0.0.1 group-juniper-j2320 admin 123
+2-Floor_10.0.0.2 group-cisco-2811 admin 123 123
+3-Reception_10.0.0.3 group-cisco-2821 admin 123 123
+4-Test_10.0.0.4 group-cisco-2811 admin 123 123
+5-VirtualGNS_10.0.0.5 group-huawei-ar1220 admin 123
