@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-'''RCC router copy config'''
+"""RCC router copy config"""
 import os
 import hashlib
 from datetime import datetime
@@ -9,11 +9,11 @@ from device_settings import cisco, huawei, juniper
 #from CONFIGCISCO import TEXT
 
 class Device:
-    '''It is work like an Expect scripts:
+    """It is work like an Expect scripts:
      - connect to a network device over telnet
      - get configuration ("show run", "display cur" etc)
      - compare (md5hash) a config with an old one
-     - save a new config.'''
+     - save a new config."""
 
     def __init__(self, location, ip, login, password, group, enpassword=None):
         self.ip = ip.encode()
@@ -139,9 +139,9 @@ class Device:
 
 
 class Git:
-    ''' Version control for configuration files by Git
+    """ Version control for configuration files by Git
     git add ., git commit -m "date+location+ip", git push to local
-    Kallithea server (https://kallithea-scm.org/).'''
+    Kallithea server (https://kallithea-scm.org/)."""
     
     def add(self, filename):
         # git add -a filename -m " "
