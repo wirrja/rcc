@@ -99,7 +99,7 @@ class Device:
                 else:
                     os.makedirs(backupdir)
                     print('Backup directory not found, creating...')
-                # if file exist, get md5_hash of potential config and current
+                # if file exist, get md5_hash of live and current config
                 if os.path.exists(backupdir + configname):
                     with open(backupdir + configname, 'rb') as b:
                         file_content = (b.read()).decode()
@@ -124,9 +124,8 @@ class Device:
 
     def compare(self, result, file_content):
         """Compare active config (type bytes)
-        with old config, already stored on hdd
-        type bytes, because '\r' in Windows.
-        str->bytes do not working! Only bytes->str!"""
+        with old config, stored on hdd.
+        replace'\r' (that appear in Windows)."""
 
         result_str = result.decode()
         new_config = (result_str.replace('\r', '')).encode()
