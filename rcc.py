@@ -6,7 +6,7 @@ from datetime import datetime
 from telnetlib import Telnet
 from device_settings import cisco, huawei, juniper
 # remove after tests
-from CONFIGCISCO import TEXT
+#from CONFIGCISCO import TEXT
 
 class Device:
     '''It is work like an Expect scripts:
@@ -16,22 +16,23 @@ class Device:
      - save a new config.'''
 
     def __init__(self, location, ip, login, password, group, enpassword=None):
-        self.ip = ip.encode('ascii')
-        self.login = login.encode('ascii')
-        self.password = password.encode('ascii')
-        self.group = group.encode('ascii')
+        self.ip = ip.encode()
+        self.login = login.encode()
+        self.password = password.encode()
+        self.group = group
         self.location = location
         if enpassword:
-            self.enpassword = enpassword.encode('ascii')
+            self.enpassword = enpassword.encode()
         else:
             pass
 
 
     def get_config(self):
-
+        """Connect to network device with incoming parameters
+        (from router_db.txt)."""
         try:
-            tn = Telnet(self.ip, 23, 1)
-
+            tn = Telnet(self.ip, 23, 5)
+            # output_conf = '0'
             if self.group == 'cisco':
                 # tn.set_debuglevel(1)
                 tn.read_until(cisco['read_login'])
@@ -46,7 +47,7 @@ class Device:
                 tn.write(cisco['nobreaks'])
                 tn.write(cisco['show_conf'])
                 tn.write(cisco['quit'])
-                output_conf = tn.read_all().decode('ascii')
+                output_conf = tn.read_all()
 
             elif self.group == 'huawei':
                 # tn.set_debuglevel(1)
@@ -54,11 +55,11 @@ class Device:
                 tn.write(self.login + b'\n')
                 tn.read_until(huawei['read_pass'])
                 tn.write(self.password + b'\n')
-                tn.read_until(huawei['waitfor'])
+                tn.read_until((self.location + '>').encode())
                 tn.write(huawei['nobreaks'])
-                tn.read_until(huawei['waitfor'])
+                tn.read_until((self.location + '>').encode())
                 tn.write(huawei['show_conf'])
-                output_conf = tn.read_until(huawei['waitfor']).decode('ascii')
+                output_conf = tn.read_until((self.location + '>').encode())
                 tn.write(huawei['quit'])
 
             elif self.group == 'juniper':
@@ -69,76 +70,85 @@ class Device:
                 tn.write(self.password + b'\n')
                 tn.read_until(juniper['waitfor'])
                 tn.write(juniper['show_conf'])
-                tn.read_until(juniper['waitfor'])
-                output_conf = tn.read_until(juniper['waitfor']).decode('ascii')
+                # tn.read_until(juniper['waitfor'])
                 tn.write(juniper['quit'])
+                output_conf = tn.read_until(juniper['waitfor'])
 
             return output_conf
-
+            
         except IOError as detail:
             curr_time = datetime.now().strftime('%b %Y %X %d')
-            errdevice = self.group + b' ' + self.ip
+            errdevice = self.group.encode() + b' ' + self.ip
             errdevice = errdevice.decode('utf-8')
             result = 'Warning! {0}! {1}. Check error.txt!'\
                         .format(detail, errdevice)
             with open('error.txt', 'a') as file:
-                file.write(curr_time + ' '+ errdevice + '\n')
+                file.write(curr_time + ' ' + errdevice + '\n')
             print(result)
-            # delete after tests
-            return TEXT
-
-
+           
     def backup(self):
-        backupdir = './configs/'
-        configname = self.location + '.txt'
+        """Save config, if new"""
+        ip = self.ip.decode('utf-8')
+        backupdir = 'C:\\Users\\admin\\PycharmProjects\\github\\rcc\\configs\\'
+        configname = self.location + '_' + ip + '.txt'
         try:
-            result = self.get_config()
-            if result:
+            new_config = self.get_config()
+            if new_config:
                 if os.path.exists(backupdir):
                     pass
                 else:
                     os.makedirs(backupdir)
                     print('Backup directory not found, creating...')
-                try:
-                    newfile = result.encode('ascii')
-                    if os.path.exists(backupdir + configname):
-                        with open(backupdir + configname, 'rb') as oldfile:
-                            hash1 = oldfile.read()
-                            hash2 = newfile
-                            h1 = hashlib.md5(hash1)
-                            h2 = hashlib.md5(hash2)
-                            if h1.hexdigest() != h2.hexdigest():
-                                oldfile.close()
-                                with open(backupdir + configname, 'w') as oldfile:
-                                    oldfile.write(result)
-                                    print(self.location, 'has updates! saved.')
-                            else:
-                                print(self.location, 'not changed')
-                    else:
-                        with open(backupdir + configname, 'w') as oldfile:
-                            oldfile.write(result)
-                            print(self.location, 'have updates! saved.')
-                except IOError as detail:
-                    print(detail)
+                # if file exist, get md5_hash of potential config and current
+                if os.path.exists(backupdir + configname):
+                    with open(backupdir + configname, 'rb') as b:
+                        file_content = (b.read()).decode()
+                        result = self.compare(new_config, file_content)
+                        if result is False:
+                            with open(backupdir + configname, 'w') as f:
+                                f.write(new_config.decode())
+                                print(self.location, ip, 'has updates! saved.')
+                                Git().add(configname)  # git add .
+                        else:
+                            print(self.location, ip, 'not changed')
+                # if file not exist, write data in new file
+                else: 
+                    with open(backupdir + configname, 'w') as file:
+                        file.write(new_config.decode())
+                        print(self.location, ip, 'has updates! saved.')
+                        Git().add(configname)
             else:
                 pass
         except IOError as detail:
             print(detail)
+
+    def compare(self, result, file_content):
+        """Compare active config (type bytes)
+        with old config, already stored on hdd
+        type bytes, because '\r' in Windows.
+        str->bytes do not working! Only bytes->str!"""
+
+        result_str = result.decode()
+        new_config = (result_str.replace('\r', '')).encode()
+        old_config = (file_content.replace('\r', '')).encode()
+        nc = hashlib.md5(new_config)
+        oc = hashlib.md5(old_config)
+        print(nc.hexdigest(), oc.hexdigest())
+
+        return nc.hexdigest() == oc.hexdigest()
 
 
 class Git:
     ''' Version control for configuration files by Git
     git add ., git commit -m "date+location+ip", git push to local
     Kallithea server (https://kallithea-scm.org/).'''
-
-    def add(self):
-        pass
-
-    def commit(self):
-        pass
+    
+    def add(self, filename):
+        # git add -a filename -m " "
+        print(filename, 'commited.')
 
     def push(self):
         pass
 
     def sent_email(self):
-        pass
+        print('ok')

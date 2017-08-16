@@ -13,7 +13,7 @@ huawei = {
     'root_cli': None,
     'nobreaks': b'screen-length 0 temporary\n',
     'show_conf': b'dis cur\n',
-    'quit': b'exit\n',
+    'quit': b'quit\n',
     'waitfor': b'>'
 }
 juniper = {
@@ -23,6 +23,6 @@ juniper = {
     'nobreaks': None,
     'show_conf': b'show configuration | no-more\n',
     'quit': b'quit\n',
-    'waitfor': b'>'
-}
+    'waitfor': b'>',
+    }
 
